@@ -1,0 +1,66 @@
+{{- $fullName := include "test-app.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.deployment.replicas }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ $fullName }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.deployment.maxSurge }}
+      maxUnavailable: {{ .Values.deployment.maxUnavailable }}
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ $fullName }}
+    spec:
+      automountServiceAccountToken: false
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      containers:
+      - image: "{{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag }}"
+        imagePullPolicy: Always
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sleep
+              - "10"
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: {{ .Values.deployment.healthcheck_url }}
+            port: {{ .Values.deployment.port }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: {{ $fullName }}
+        ports:
+        - containerPort: {{ .Values.deployment.port }}
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: {{ .Values.deployment.healthcheck_url }}
+            port: {{ .Values.deployment.port }}
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
