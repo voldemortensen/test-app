@@ -41,7 +41,7 @@ jobs:
 
       - name: Package Helm chart
         run: |
-          helm package helm/ --version ${{ github.sha }}-helm --app-version ${{ github.sha }}
+          helm package helm/ --version ${{ github.sha }}-helm
 
       - name: Push Helm chart to Docker Hub as OCI artifact
         run: |
